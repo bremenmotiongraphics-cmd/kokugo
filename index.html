@@ -261,13 +261,17 @@
 
 <script src="kokugo_shou.js"></script>
 <script src="kokugo_chu.js"></script>
+<script src="kokugo_ippan.js"></script>
 <script>
 // ================= データ整理 =================
 const CATS = ["yomi", "kaki", "yoji", "kotowaza", "kanyo", "koji", "ruigi", "doon", "keigo", "bunpo"];
+const IPPAN_CATS = ["yoji", "kotowaza", "kanyo", "koji", "ruigi", "doon", "keigo"];
 const MANIFEST = [
   { grade: "小学生", ids: CATS.map(c => "shou_" + c) },
   { grade: "中学生", ids: CATS.map(c => "chu_" + c) },
+  { grade: "一般教養", ids: IPPAN_CATS.map(c => "ippan_" + c) },
 ];
+const GRADE_PREFIX = { "小学生": "小・", "中学生": "中・", "一般教養": "般・" };
 
 const DATA = {};
 (window.KOKUGO_DATA || []).forEach(d => { DATA[d.id] = d; });
@@ -276,7 +280,7 @@ Object.values(DATA).forEach(d => d.words.forEach(w => { if (w.length < 4) w.push
 
 const SHORT_LABEL = {};
 MANIFEST.forEach(g => g.ids.forEach(id => {
-  if (DATA[id]) SHORT_LABEL[id] = (g.grade === "小学生" ? "小・" : "中・") + DATA[id].label;
+  if (DATA[id]) SHORT_LABEL[id] = (GRADE_PREFIX[g.grade] || "") + DATA[id].label;
 }));
 
 // ================= 状態 =================
@@ -546,12 +550,21 @@ function nextQuestion() {
     ? `にがて問題 のこり${q.order.length - q.idx}問`
     : q.lap > 1 ? `⭐ 全${q.pool.length}問を${q.lap - 1}周クリア中!` : `全${q.pool.length}問 / のこり${q.order.length - q.idx}問`;
 
-  // 4択生成: 正解 + まちがい3つ（同じカテゴリの問題から優先して選ぶ）
+  // 4択生成: 正解 + まちがい3つ
+  // 優先順位: ①同じ読みの同音・同訓異字（効く⇔聞く等） ②答えと漢字が1字共通する紛らわしい語 ③同じカテゴリ ④その他
   const ansText = isE2J ? word[2] : word[0];
   const src = q.distPool || q.pool;
   const wrongs = [];
   const others = src.filter(w => w !== word && (isE2J ? w[2] : w[0]) !== ansText);
-  const cand = shuffle(others.filter(w => w[3] === word[3])).concat(shuffle(others.filter(w => w[3] !== word[3])));
+  const isDoon = String(word[3]).includes("doon");
+  const rank = w => {
+    if (isDoon && word[1] && w[1] === word[1]) return 0;
+    const t = isE2J ? w[2] : w[0];
+    if (w[3] === word[3] && [...ansText].some(c => c >= "一" && c <= "鿿" && t.includes(c))) return 1;
+    if (w[3] === word[3]) return 2;
+    return 3;
+  };
+  const cand = shuffle(others).sort((a, b) => rank(a) - rank(b));
   for (const w of cand) {
     const t = isE2J ? w[2] : w[0];
     if (!wrongs.includes(t)) wrongs.push(t);
