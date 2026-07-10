@@ -71,6 +71,12 @@
   .rec-val { color: #e0503a; font-weight: 800; }
   .rec-val .of { color: #d6b8a6; font-weight: 400; font-size: 11px; }
   .rec-empty { color: #d6b8a6; font-size: 12px; text-align: center; padding: 8px; }
+  .clear-badge {
+    display: inline-block; background: linear-gradient(135deg, #ffd54f, #ffb300);
+    color: #7a4f00; font-size: 10px; font-weight: 800; border-radius: 999px;
+    padding: 2px 8px; margin-left: 6px; vertical-align: middle;
+    box-shadow: 0 1px 4px rgba(255, 179, 0, .4);
+  }
 
   /* ===== クイズ画面 ===== */
   .screen { display: none; }
@@ -360,6 +366,14 @@ function renderResume() {
 }
 
 // ================= ホーム描画 =================
+// そのカテゴリ(単独)を全問ノーミスで一周した記録があるか
+function isCleared(id) {
+  const r = loadRec()[id];
+  if (!r) return false;
+  const total = poolOf([id]).length;
+  return (r.e2j && r.e2j.best >= total) || (r.j2e && r.j2e.best >= total);
+}
+
 function renderRanges() {
   const area = document.getElementById("range-area");
   area.innerHTML = "";
@@ -374,7 +388,7 @@ function renderRanges() {
     avail.forEach(id => {
       const chip = document.createElement("div");
       chip.className = "range-chip" + (selected.has(id) ? " on" : "");
-      chip.innerHTML = `${DATA[id].label}<span class="cnt">${DATA[id].words.length}問</span>`;
+      chip.innerHTML = `${isCleared(id) ? "👑" : ""}${DATA[id].label}<span class="cnt">${DATA[id].words.length}問</span>`;
       chip.onclick = () => {
         selected.has(id) ? selected.delete(id) : selected.add(id);
         renderRanges(); renderRecords();
@@ -417,10 +431,11 @@ function renderRecords() {
     const r = rec[k];
     const total = poolOf(k.split("+")).length;
     const parts = [];
-    if (r.e2j) parts.push(`問→答 <b>${r.e2j.best}</b>`);
-    if (r.j2e) parts.push(`答→問 <b>${r.j2e.best}</b>`);
+    if (r.e2j) parts.push(`問→答 <b>${r.e2j.best}</b>` + (r.e2j.best >= total ? "👑" : ""));
+    if (r.j2e) parts.push(`答→問 <b>${r.j2e.best}</b>` + (r.j2e.best >= total ? "👑" : ""));
+    const cleared = (r.e2j && r.e2j.best >= total) || (r.j2e && r.j2e.best >= total);
     return `<div class="rec-row">
-      <span class="rec-label">${comboLabel(k)}</span>
+      <span class="rec-label">${comboLabel(k)}${cleared ? '<span class="clear-badge">クリア!</span>' : ""}</span>
       <span class="rec-val">${parts.join(" ／ ")} <span class="of">/ ${total}問</span></span>
     </div>`;
   }).join("");
