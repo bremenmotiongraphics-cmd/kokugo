@@ -555,32 +555,42 @@ function nextQuestion() {
     ? `にがて問題 のこり${q.order.length - q.idx}問`
     : q.lap > 1 ? `⭐ 全${q.pool.length}問を${q.lap - 1}周クリア中!` : `全${q.pool.length}問 / のこり${q.order.length - q.idx}問`;
 
-  // 4択生成: 正解 + まちがい3つ
-  // 優先順位: ⓪その語の誤読ダミー（相殺→そうさつ等） ①同じ読みの同音・同訓異字（効く⇔聞く等）
-  //           ②答えと漢字が1字共通する紛らわしい語 ③同じカテゴリ ④その他
+  // 選択肢生成:
+  // 「質の高いハズレ」= その語の誤読ダミー（相殺→そうさつ等）+ 同じ読みの同音・同訓異字（効く⇔聞く等）
+  // 質の高いハズレが2つ以上あればそれだけで3〜4択にする（無関係な埋め草を混ぜない）。
+  // 1つなら1つだけ補充して3択、0なら従来どおり補充して4択。
   const ansText = isE2J ? word[2] : word[0];
   const src = q.distPool || q.pool;
-  const wrongs = [];
-  if (isE2J && Array.isArray(word[3])) {
-    for (const t of shuffle(word[3])) {
-      if (wrongs.length < 3 && t !== ansText && !wrongs.includes(t)) wrongs.push(t);
-    }
-  }
   const others = src.filter(w => w !== word && (isE2J ? w[2] : w[0]) !== ansText);
   const myId = dsId(word);
   const isDoon = myId.includes("doon");
-  const rank = w => {
-    if (isDoon && word[1] && w[1] === word[1]) return 0;
-    const t = isE2J ? w[2] : w[0];
-    if (dsId(w) === myId && [...ansText].some(c => c >= "一" && c <= "鿿" && t.includes(c))) return 1;
-    if (dsId(w) === myId) return 2;
-    return 3;
-  };
-  const cand = shuffle(others).sort((a, b) => rank(a) - rank(b));
-  for (const w of cand) {
-    if (wrongs.length === 3) break;
-    const t = isE2J ? w[2] : w[0];
-    if (!wrongs.includes(t)) wrongs.push(t);
+  const quality = [];
+  if (isE2J && Array.isArray(word[3])) {
+    for (const t of shuffle(word[3])) {
+      if (t !== ansText && !quality.includes(t)) quality.push(t);
+    }
+  }
+  if (isDoon && word[1]) {
+    for (const w of shuffle(others)) {
+      const t = isE2J ? w[2] : w[0];
+      if (w[1] === word[1] && !quality.includes(t)) quality.push(t);
+    }
+  }
+  const wrongs = quality.slice(0, 3);
+  const target = quality.length >= 2 ? wrongs.length : (quality.length === 1 ? 2 : 3);
+  if (wrongs.length < target) {
+    // 補充の優先順位: 漢字が1字共通する紛らわしい語 → 同じカテゴリ → その他
+    const rank = w => {
+      const t = isE2J ? w[2] : w[0];
+      if (dsId(w) === myId && [...ansText].some(c => c >= "一" && c <= "鿿" && t.includes(c))) return 1;
+      if (dsId(w) === myId) return 2;
+      return 3;
+    };
+    for (const w of shuffle(others).sort((a, b) => rank(a) - rank(b))) {
+      if (wrongs.length >= target) break;
+      const t = isE2J ? w[2] : w[0];
+      if (!wrongs.includes(t)) wrongs.push(t);
+    }
   }
   const options = shuffle([ansText, ...wrongs]);
 
