@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>国語クイズ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: linear-gradient(160deg, #fff7ed 0%, #fef2f2 50%, #fdf2f8 100%);
+    min-height: 100vh;
+    color: #3f3b3b;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 16px 14px 60px; }
+
+  /* ===== ヘッダー ===== */
+  .app-title {
+    text-align: center; font-size: 22px; font-weight: 800; color: #c2570f;
+    padding: 10px 0 2px; letter-spacing: 1px;
+  }
+  .app-sub { text-align: center; font-size: 12px; color: #d1a284; margin-bottom: 14px; }
+
+  /* ===== カード ===== */
+  .card {
+    background: #fff; border-radius: 18px; padding: 16px;
+    box-shadow: 0 4px 14px rgba(194, 87, 15, .10);
+    margin-bottom: 14px;
+  }
+  .card h2 { font-size: 14px; color: #c2570f; margin-bottom: 10px; }
+
+  /* ===== 範囲選択 ===== */
+  .grade-group { margin-bottom: 8px; }
+  .grade-name { font-size: 11px; color: #c9a18a; font-weight: 700; margin: 6px 0 4px; }
+  .range-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .range-chip {
+    border: 2px solid #f5e0d0; border-radius: 999px; padding: 7px 12px;
+    font-size: 13px; background: #fffaf5; color: #85685a; cursor: pointer;
+    user-select: none; transition: all .15s;
+  }
+  .range-chip.on { background: #c2570f; border-color: #c2570f; color: #fff; font-weight: 700; }
+  .range-chip .cnt { font-size: 10px; opacity: .75; margin-left: 3px; }
+
+  /* ===== 方向トグル ===== */
+  .dir-row { display: flex; gap: 8px; }
+  .dir-btn {
+    flex: 1; padding: 10px; border-radius: 12px; border: 2px solid #f5e0d0;
+    background: #fffaf5; font-size: 14px; color: #85685a; cursor: pointer; font-weight: 700;
+  }
+  .dir-btn.on { background: #e0503a; border-color: #e0503a; color: #fff; }
+
+  /* ===== メインボタン ===== */
+  .main-btns { display: flex; gap: 10px; }
+  .big-btn {
+    flex: 1; padding: 18px 8px; border: none; border-radius: 16px;
+    font-size: 17px; font-weight: 800; color: #fff; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,.12);
+  }
+  .big-btn:active { transform: scale(.97); }
+  .btn-quiz { background: linear-gradient(135deg, #e0503a, #f0913e); }
+  .btn-book { background: linear-gradient(135deg, #c2570f, #a04dbf); }
+  .big-btn small { display: block; font-size: 11px; font-weight: 400; opacity: .9; margin-top: 3px; }
+
+  /* ===== 記録 ===== */
+  .rec-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 4px; border-bottom: 1px dashed #faeadd; font-size: 13px;
+  }
+  .rec-row:last-child { border-bottom: none; }
+  .rec-label { color: #85685a; font-weight: 700; }
+  .rec-val { color: #e0503a; font-weight: 800; }
+  .rec-val .of { color: #d6b8a6; font-weight: 400; font-size: 11px; }
+  .rec-empty { color: #d6b8a6; font-size: 12px; text-align: center; padding: 8px; }
+
+  /* ===== クイズ画面 ===== */
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .quiz-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .streak-box { font-size: 14px; font-weight: 800; color: #c2570f; }
+  .streak-box .num { font-size: 26px; color: #e0503a; }
+  .quit-btn {
+    border: none; background: #faeadd; color: #c2570f; border-radius: 999px;
+    padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .q-card {
+    background: #fff; border-radius: 20px; padding: 30px 16px; text-align: center;
+    box-shadow: 0 4px 14px rgba(194, 87, 15, .12); margin-bottom: 14px;
+    min-height: 130px; display: flex; flex-direction: column; justify-content: center;
+  }
+  .q-word { font-size: 34px; font-weight: 800; color: #3f3b3b; word-break: break-word; }
+  .q-word.jp { font-size: 20px; line-height: 1.6; }
+  .q-reading { font-size: 14px; color: #c9a18a; margin-top: 6px; min-height: 18px; }
+  .choices { display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn {
+    padding: 15px 14px; border-radius: 14px; border: 2px solid #f5e0d0;
+    background: #fff; font-size: 16px; color: #3f3b3b; cursor: pointer; text-align: left;
+    font-weight: 600; transition: all .12s; word-break: break-word;
+  }
+  .choice-btn:active { transform: scale(.98); }
+  .choice-btn.correct { background: #d1fadf; border-color: #34c77b; color: #1a7d4b; }
+  .choice-btn.wrong { background: #ffe0e5; border-color: #f4749b; color: #d13a63; animation: shake .3s; }
+  .choice-btn.dim { opacity: .45; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .lap-note { text-align: center; font-size: 11px; color: #d6b8a6; margin-top: 10px; }
+  #next-btn {
+    width: 100%; margin-top: 12px; padding: 15px; border: none; border-radius: 14px;
+    background: #c2570f; color: #fff; font-size: 16px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(194, 87, 15, .3);
+  }
+  #next-btn:active { transform: scale(.98); }
+  .nigate-row { display: flex; gap: 8px; margin-top: 8px; }
+  .nigate-note { font-size: 12px; color: #c9a18a; }
+  .resume-btn {
+    width: 100%; margin-bottom: 14px; padding: 14px; border: none; border-radius: 16px;
+    background: linear-gradient(135deg, #34c77b, #2aa5a0); color: #fff;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(52, 199, 123, .3); text-align: center;
+  }
+  .resume-btn small { display: block; font-size: 11px; font-weight: 400; opacity: .95; margin-top: 3px; }
+  .resume-btn:active { transform: scale(.98); }
+
+  /* ===== 結果画面 ===== */
+  .result-card { text-align: center; padding: 30px 16px; }
+  .result-emoji { font-size: 48px; }
+  .result-score { font-size: 40px; font-weight: 800; color: #e0503a; margin: 6px 0; }
+  .result-score small { font-size: 15px; color: #c9a18a; font-weight: 700; }
+  .result-msg { font-size: 14px; color: #85685a; margin-bottom: 6px; }
+  .result-best { font-size: 13px; color: #c2570f; font-weight: 700; margin-bottom: 4px; }
+  .new-record {
+    display: inline-block; background: #fff3c4; color: #b7791f; font-weight: 800;
+    border-radius: 999px; padding: 5px 14px; font-size: 13px; margin: 6px 0;
+  }
+  .miss-box {
+    background: #fffaf5; border-radius: 14px; padding: 12px; margin: 12px 0;
+    font-size: 15px; color: #3f3b3b;
+  }
+  .miss-box .w { font-size: 20px; font-weight: 800; }
+  .miss-box .r { font-size: 12px; color: #c9a18a; }
+  .miss-box .m { font-size: 15px; color: #d13a63; font-weight: 700; margin-top: 4px; }
+
+  /* ===== ことば帳 ===== */
+  .search-box {
+    width: 100%; padding: 12px 14px; border-radius: 14px; border: 2px solid #f5e0d0;
+    font-size: 15px; outline: none; background: #fff; margin-bottom: 10px;
+  }
+  .search-box:focus { border-color: #c2570f; }
+  .book-tools { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .toggle-btn {
+    border: 2px solid #f5e0d0; background: #fff; color: #85685a; border-radius: 999px;
+    padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .toggle-btn.on { background: #c2570f; border-color: #c2570f; color: #fff; }
+  .book-count { font-size: 12px; color: #c9a18a; margin-left: auto; }
+  .word-row {
+    background: #fff; border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
+    box-shadow: 0 2px 6px rgba(194, 87, 15, .07); cursor: pointer;
+  }
+  .word-row .en { font-size: 17px; font-weight: 800; color: #3f3b3b; }
+  .word-row .rd { font-size: 12px; color: #c9a18a; margin-left: 8px; }
+  .word-row .mn { font-size: 14px; color: #c2570f; margin-top: 4px; font-weight: 600; }
+  .word-row .mn.hidden { visibility: hidden; }
+  .word-row .tag { font-size: 10px; color: #d6b8a6; float: right; }
+  .load-more { width: 100%; padding: 12px; border: none; border-radius: 14px; background: #faeadd; color: #c2570f; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 4px; }
+
+  .back-btn {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    border: none; background: #c2570f; color: #fff; border-radius: 999px;
+    padding: 12px 30px; font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(194, 87, 15, .35); z-index: 10;
+  }
+  .warn { color: #d13a63; font-size: 13px; text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ ホーム ============ -->
+  <div id="scr-home" class="screen active">
+    <div class="app-title">🍁 国語クイズ 🍁</div>
+    <div class="app-sub">まちがえるまで何問続く？</div>
+
+    <div class="card">
+      <h2>📚 出題範囲（複数えらべるよ）</h2>
+      <div id="range-area"></div>
+    </div>
+
+    <div class="card">
+      <h2>🔁 出題方向</h2>
+      <div class="dir-row">
+        <button class="dir-btn on" id="dir-e2j" onclick="setDir('e2j')">問題 → 答え</button>
+        <button class="dir-btn" id="dir-j2e" onclick="setDir('j2e')">答え → 問題（逆）</button>
+      </div>
+    </div>
+
+    <div id="resume-area"></div>
+
+    <div class="main-btns">
+      <button class="big-btn btn-quiz" onclick="startQuiz()">🔥 クイズ<small>エンドレスモード</small></button>
+      <button class="big-btn btn-book" onclick="openBook()">📖 ことば帳<small>見る・調べる</small></button>
+    </div>
+    <div id="home-warn" class="warn"></div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2>😖 にがて問題 <span id="nigate-count" style="color:#e0503a;"></span></h2>
+      <div id="nigate-body"></div>
+    </div>
+
+    <div class="card">
+      <h2>🏆 これまでの記録</h2>
+      <div id="rec-area"><div class="rec-empty">まだ記録がないよ。クイズに挑戦してみよう!</div></div>
+    </div>
+  </div>
+
+  <!-- ============ クイズ ============ -->
+  <div id="scr-quiz" class="screen">
+    <div class="quiz-top">
+      <div class="streak-box"><span class="num" id="streak-num">0</span> <span id="streak-label">連続正解</span></div>
+      <div style="display:flex;gap:6px;">
+        <button class="quit-btn" id="auto-btn" onclick="toggleAuto()">▶ 手動</button>
+        <button class="quit-btn" onclick="quitQuiz()">やめる</button>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-word" id="q-word"></div>
+      <div class="q-reading" id="q-reading"></div>
+    </div>
+    <div class="choices" id="choices"></div>
+    <button id="next-btn" style="display:none;"></button>
+    <div class="lap-note" id="lap-note"></div>
+  </div>
+
+  <!-- ============ 結果 ============ -->
+  <div id="scr-result" class="screen">
+    <div class="card result-card">
+      <div class="result-emoji" id="result-emoji">😢</div>
+      <div class="result-score"><span id="result-score">0</span><small id="result-unit"> 連続正解</small></div>
+      <div class="result-msg" id="result-msg"></div>
+      <div id="result-record"></div>
+      <div class="miss-box" id="miss-box"></div>
+      <div class="main-btns" style="margin-top:14px;">
+        <button class="big-btn btn-quiz" onclick="retryQuiz()">もう一回!</button>
+        <button class="big-btn btn-book" onclick="goHome()">ホームへ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ことば帳 ============ -->
+  <div id="scr-book" class="screen">
+    <div class="app-title" style="font-size:18px;">📖 ことば帳</div>
+    <input type="text" class="search-box" id="search" placeholder="ことば・読み・意味でけんさく 🔍" oninput="renderBook()">
+    <div class="book-tools">
+      <button class="toggle-btn" id="hide-mn" onclick="toggleMeaning()">答えをかくす</button>
+      <span class="book-count" id="book-count"></span>
+    </div>
+    <div id="book-list"></div>
+    <button class="back-btn" onclick="goHome()">← もどる</button>
+    <div style="height:70px;"></div>
+  </div>
+
+</div>
+
+<script src="kokugo_shou.js"></script>
+<script src="kokugo_chu.js"></script>
+<script>
+// ================= データ整理 =================
+const CATS = ["yomi", "kaki", "yoji", "kotowaza", "kanyo", "koji", "ruigi", "doon", "keigo", "bunpo"];
+const MANIFEST = [
+  { grade: "小学生", ids: CATS.map(c => "shou_" + c) },
+  { grade: "中学生", ids: CATS.map(c => "chu_" + c) },
+];
+
+const DATA = {};
+(window.KOKUGO_DATA || []).forEach(d => { DATA[d.id] = d; });
+// 各問題にカテゴリIDを持たせる（まちがい選択肢を同じカテゴリから優先して出すため）
+Object.values(DATA).forEach(d => d.words.forEach(w => { if (w.length < 4) w.push(d.id); }));
+
+const SHORT_LABEL = {};
+MANIFEST.forEach(g => g.ids.forEach(id => {
+  if (DATA[id]) SHORT_LABEL[id] = (g.grade === "小学生" ? "小・" : "中・") + DATA[id].label;
+}));
+
+// ================= 状態 =================
+const LS_KEY = "kokugo_records_v1";
+const NG_KEY = "kokugo_nigate_v1";
+let selected = new Set();
+let dir = "e2j"; // e2j: 問題→答え, j2e: 答え→問題
+let quiz = null;
+let autoMode = localStorage.getItem("kokugo_auto") === "1"; // 自動で次へ進むか
+
+function loadRec() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) { return {}; } }
+function saveRec(r) { localStorage.setItem(LS_KEY, JSON.stringify(r)); }
+
+// ===== にがて問題ストック =====
+function loadNigate() { try { return JSON.parse(localStorage.getItem(NG_KEY)) || {}; } catch (e) { return {}; } }
+function saveNigate(o) { localStorage.setItem(NG_KEY, JSON.stringify(o)); }
+function nKey(w) { return w[0] + "|" + w[2]; }
+function nigateAdd(w) { const o = loadNigate(); o[nKey(w)] = w; saveNigate(o); }
+function nigateRemove(w) { const o = loadNigate(); if (o[nKey(w)]) { delete o[nKey(w)]; saveNigate(o); } }
+
+// カタカナ→ひらがな変換（検索用）
+function kanaFold(s) {
+  return String(s).toLowerCase().replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+}
+
+// ===== 続きから（進行状況の自動保存） =====
+const RS_KEY = "kokugo_resume_v1";
+function saveResume() {
+  const q = quiz;
+  if (!q || q.nigate) return;
+  localStorage.setItem(RS_KEY, JSON.stringify({
+    key: q.key, dir: q.dir, idx: q.idx, streak: q.streak, lap: q.lap,
+    order: q.order.map(nKey)
+  }));
+}
+function clearResume() { localStorage.removeItem(RS_KEY); }
+function loadResume() { try { return JSON.parse(localStorage.getItem(RS_KEY)); } catch (e) { return null; } }
+
+function resumeQuiz() {
+  const s = loadResume();
+  if (!s) return;
+  const pool = poolOf(s.key.split("+"));
+  const map = {};
+  pool.forEach(w => { map[nKey(w)] = w; });
+  const order = s.order.map(k => map[k]).filter(Boolean); // データ更新で消えた問題は除外
+  if (pool.length === 0 || order.length === 0) { clearResume(); goHome(); return; }
+  quiz = {
+    pool: pool,
+    order: order,
+    idx: Math.min(s.idx, order.length),
+    streak: s.streak,
+    lap: s.lap || 1,
+    key: s.key,
+    dir: s.dir,
+    lock: false,
+  };
+  document.getElementById("streak-label").textContent = "連続正解";
+  updateAutoBtn();
+  show("scr-quiz");
+  nextQuestion();
+}
+
+function renderResume() {
+  const area = document.getElementById("resume-area");
+  const s = loadResume();
+  if (!s || s.streak === 0) { area.innerHTML = ""; return; }
+  const remain = Math.max(0, s.order.length - s.idx);
+  area.innerHTML = `
+    <button class="resume-btn" onclick="resumeQuiz()">▶ 続きから
+      <small>${comboLabel(s.key)} ／ ${s.dir === "e2j" ? "問題→答え" : "答え→問題"} ／ ${s.streak}連続正解中・のこり${remain}問</small>
+    </button>`;
+}
+
+// ================= ホーム描画 =================
+function renderRanges() {
+  const area = document.getElementById("range-area");
+  area.innerHTML = "";
+  MANIFEST.forEach(group => {
+    const avail = group.ids.filter(id => DATA[id]);
+    if (avail.length === 0) return; // データ未登録の学年は非表示
+    const g = document.createElement("div");
+    g.className = "grade-group";
+    g.innerHTML = `<div class="grade-name">${group.grade}</div>`;
+    const grid = document.createElement("div");
+    grid.className = "range-grid";
+    avail.forEach(id => {
+      const chip = document.createElement("div");
+      chip.className = "range-chip" + (selected.has(id) ? " on" : "");
+      chip.innerHTML = `${DATA[id].label}<span class="cnt">${DATA[id].words.length}問</span>`;
+      chip.onclick = () => {
+        selected.has(id) ? selected.delete(id) : selected.add(id);
+        renderRanges(); renderRecords();
+        document.getElementById("home-warn").textContent = "";
+      };
+      grid.appendChild(chip);
+    });
+    g.appendChild(grid);
+    area.appendChild(g);
+  });
+}
+
+function comboKey() { return [...selected].sort().join("+"); }
+function comboLabel(key) {
+  return key.split("+").map(id => SHORT_LABEL[id] || id).join(" + ");
+}
+function poolOf(ids) {
+  let pool = [];
+  ids.forEach(id => { if (DATA[id]) pool = pool.concat(DATA[id].words); });
+  // 完全に同じ (問題+答え) だけ除去
+  const seen = new Set();
+  return pool.filter(w => {
+    const k = w[0] + "|" + w[2];
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
+
+function renderRecords() {
+  const rec = loadRec();
+  const area = document.getElementById("rec-area");
+  const keys = Object.keys(rec);
+  if (keys.length === 0) {
+    area.innerHTML = '<div class="rec-empty">まだ記録がないよ。クイズに挑戦してみよう!</div>';
+    return;
+  }
+  // 選択中の組み合わせを先頭に、あとは記録のある順
+  keys.sort((a, b) => (b === comboKey()) - (a === comboKey()));
+  area.innerHTML = keys.map(k => {
+    const r = rec[k];
+    const total = poolOf(k.split("+")).length;
+    const parts = [];
+    if (r.e2j) parts.push(`問→答 <b>${r.e2j.best}</b>`);
+    if (r.j2e) parts.push(`答→問 <b>${r.j2e.best}</b>`);
+    return `<div class="rec-row">
+      <span class="rec-label">${comboLabel(k)}</span>
+      <span class="rec-val">${parts.join(" ／ ")} <span class="of">/ ${total}問</span></span>
+    </div>`;
+  }).join("");
+}
+
+function setDir(d) {
+  dir = d;
+  document.getElementById("dir-e2j").classList.toggle("on", d === "e2j");
+  document.getElementById("dir-j2e").classList.toggle("on", d === "j2e");
+}
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+function goHome() { bookNigate = false; renderRanges(); renderRecords(); renderNigate(); renderResume(); show("scr-home"); }
+
+function renderNigate() {
+  const list = Object.values(loadNigate());
+  document.getElementById("nigate-count").textContent = list.length ? `${list.length}問` : "";
+  const body = document.getElementById("nigate-body");
+  if (list.length === 0) {
+    body.innerHTML = '<div class="rec-empty">まちがえた問題がここにたまるよ。今はゼロ! 🎉</div>';
+    return;
+  }
+  body.innerHTML = `
+    <div class="nigate-note">クイズでまちがえた問題のリスト。正解すると自動で消えるよ。</div>
+    <div class="nigate-row">
+      <button class="dir-btn on" style="background:#e0503a;border-color:#e0503a;" onclick="startNigate()">💪 克服クイズ</button>
+      <button class="dir-btn" onclick="openNigateBook()">📋 一覧を見る</button>
+    </div>`;
+}
+
+// ================= クイズ =================
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function updateAutoBtn() {
+  document.getElementById("auto-btn").textContent = autoMode ? "⚡ 自動" : "▶ 手動";
+}
+function toggleAuto() {
+  autoMode = !autoMode;
+  localStorage.setItem("kokugo_auto", autoMode ? "1" : "0");
+  updateAutoBtn();
+  // 回答表示中に切り替えたら、手動→自動の場合は即進める
+  if (quiz && quiz.lock && autoMode && quiz.pendingNext) {
+    const fn = quiz.pendingNext; quiz.pendingNext = null;
+    hideNextBtn(); fn();
+  }
+}
+function showNextBtn(label, fn) {
+  const b = document.getElementById("next-btn");
+  b.textContent = label;
+  b.style.display = "";
+  quiz.pendingNext = fn;
+  b.onclick = () => { quiz.pendingNext = null; hideNextBtn(); fn(); };
+}
+function hideNextBtn() { document.getElementById("next-btn").style.display = "none"; }
+
+function startQuiz() {
+  if (selected.size === 0) {
+    document.getElementById("home-warn").textContent = "出題範囲を1つ以上えらんでね!";
+    show("scr-home");
+    return;
+  }
+  const pool = poolOf([...selected]);
+  quiz = {
+    pool: pool,
+    order: shuffle(pool),
+    idx: 0,
+    streak: 0,
+    lap: 1,
+    key: comboKey(),
+    dir: dir,
+    lock: false,
+  };
+  document.getElementById("streak-label").textContent = "連続正解";
+  updateAutoBtn();
+  show("scr-quiz");
+  nextQuestion();
+}
+
+// にがて克服クイズ: ストック全部を1周、正解したらストックから消える
+function startNigate() {
+  const list = shuffle(Object.values(loadNigate()));
+  if (list.length === 0) return;
+  quiz = {
+    pool: list,
+    distPool: poolOf(MANIFEST.flatMap(g => g.ids)), // まちがい選択肢は全問題から
+    order: list,
+    idx: 0,
+    streak: 0, // 克服数として使う
+    ngCount: 0,
+    nigate: true,
+    dir: dir,
+    lock: false,
+  };
+  document.getElementById("streak-label").textContent = "克服";
+  updateAutoBtn();
+  show("scr-quiz");
+  nextQuestion();
+}
+
+function nextQuestion() {
+  const q = quiz;
+  hideNextBtn();
+  if (q.nigate) {
+    if (q.idx >= q.order.length) return endNigate();
+  } else if (q.idx >= q.order.length) { // 一周クリア → シャッフルして次の周へ
+    q.order = shuffle(q.pool);
+    q.idx = 0;
+    q.lap++;
+  }
+  q.current = q.order[q.idx];
+  q.lock = false;
+
+  const word = q.current;
+  const isE2J = q.dir === "e2j";
+  const qText = isE2J ? word[0] : word[2];
+  document.getElementById("q-word").textContent = qText;
+  document.getElementById("q-word").className = "q-word" + (qText.length > 7 ? " jp" : "");
+  document.getElementById("q-reading").textContent = "";
+  document.getElementById("streak-num").textContent = q.streak;
+  document.getElementById("lap-note").textContent = q.nigate
+    ? `にがて問題 のこり${q.order.length - q.idx}問`
+    : q.lap > 1 ? `⭐ 全${q.pool.length}問を${q.lap - 1}周クリア中!` : `全${q.pool.length}問 / のこり${q.order.length - q.idx}問`;
+
+  // 4択生成: 正解 + まちがい3つ（同じカテゴリの問題から優先して選ぶ）
+  const ansText = isE2J ? word[2] : word[0];
+  const src = q.distPool || q.pool;
+  const wrongs = [];
+  const others = src.filter(w => w !== word && (isE2J ? w[2] : w[0]) !== ansText);
+  const cand = shuffle(others.filter(w => w[3] === word[3])).concat(shuffle(others.filter(w => w[3] !== word[3])));
+  for (const w of cand) {
+    const t = isE2J ? w[2] : w[0];
+    if (!wrongs.includes(t)) wrongs.push(t);
+    if (wrongs.length === 3) break;
+  }
+  const options = shuffle([ansText, ...wrongs]);
+
+  const box = document.getElementById("choices");
+  box.innerHTML = "";
+  options.forEach(opt => {
+    const b = document.createElement("button");
+    b.className = "choice-btn";
+    b.textContent = opt;
+    b.onclick = () => answer(b, opt === ansText, ansText);
+    box.appendChild(b);
+  });
+}
+
+function answer(btn, ok, ansText) {
+  const q = quiz;
+  if (q.lock) return;
+  q.lock = true;
+  document.getElementById("q-reading").textContent = q.current[1]; // 読みを表示
+
+  const btns = [...document.querySelectorAll(".choice-btn")];
+  btns.forEach(b => { if (b.textContent === ansText) b.classList.add("correct"); else b.classList.add("dim"); });
+
+  if (ok) {
+    nigateRemove(q.current); // 正解したらにがてストックから消す
+    q.streak++;
+    q.idx++;
+    saveResume(); // 続きから用に自動保存
+    document.getElementById("streak-num").textContent = q.streak;
+    if (autoMode) setTimeout(() => { if (q === quiz && q.lock) { hideNextBtn(); nextQuestion(); } }, 700);
+    else showNextBtn("次の問題 →", nextQuestion);
+  } else {
+    nigateAdd(q.current); // まちがえたらにがてストックへ
+    btn.classList.remove("dim");
+    btn.classList.add("wrong");
+    if (q.nigate) { // 克服モードはまちがえても続行
+      q.ngCount++;
+      q.idx++;
+      if (autoMode) setTimeout(() => { if (q === quiz && q.lock) { hideNextBtn(); nextQuestion(); } }, 1400);
+      else showNextBtn("次の問題 →", nextQuestion);
+    } else {
+      clearResume(); // 不正解でラン終了 → 続きからは消す
+      if (autoMode) setTimeout(() => { if (q === quiz && q.lock) { hideNextBtn(); endQuiz(false); } }, 1400);
+      else showNextBtn("結果を見る →", () => endQuiz(false));
+    }
+  }
+}
+
+function quitQuiz() {
+  hideNextBtn();
+  if (quiz && quiz.nigate) endNigate();
+  else endQuiz(true);
+}
+
+function retryQuiz() {
+  if (quiz && quiz.nigate) {
+    if (Object.keys(loadNigate()).length > 0) startNigate(); else goHome();
+  } else startQuiz();
+}
+
+function endNigate() {
+  const q = quiz;
+  const remain = Object.keys(loadNigate()).length;
+  document.getElementById("result-score").textContent = q.streak;
+  document.getElementById("result-unit").textContent = " 問 克服";
+  document.getElementById("result-emoji").textContent = remain === 0 ? "👑" : q.streak > 0 ? "💪" : "😢";
+  document.getElementById("result-msg").textContent =
+    remain === 0 ? "にがて問題ぜんぶ克服! すごい!" : `にがて問題 のこり${remain}問`;
+  document.getElementById("result-record").innerHTML = "";
+  document.getElementById("miss-box").style.display = "none";
+  show("scr-result");
+}
+
+function endQuiz(quit) {
+  const q = quiz;
+  const rec = loadRec();
+  const entry = rec[q.key] || {};
+  const old = entry[q.dir] ? entry[q.dir].best : 0;
+  const isNew = q.streak > old;
+  if (isNew) {
+    entry[q.dir] = { best: q.streak, date: new Date().toLocaleDateString("ja-JP") };
+    rec[q.key] = entry;
+    saveRec(rec);
+  }
+
+  document.getElementById("result-score").textContent = q.streak;
+  document.getElementById("result-unit").textContent = " 連続正解";
+  const total = q.pool.length;
+  const emoji = q.streak >= total ? "👑" : q.streak >= total * 0.7 ? "🥳" : q.streak >= 10 ? "😊" : "😢";
+  document.getElementById("result-emoji").textContent = emoji;
+  document.getElementById("result-msg").textContent =
+    `${comboLabel(q.key)}（全${total}問）／ ${q.dir === "e2j" ? "問題→答え" : "答え→問題"}` +
+    (q.lap > 1 ? ` ／ ${q.lap - 1}周クリア!` : "");
+  document.getElementById("result-record").innerHTML = isNew
+    ? '<div class="new-record">🎉 新記録!</div>'
+    : `<div class="result-best">これまでの最高: ${old} 連続</div>`;
+
+  const miss = document.getElementById("miss-box");
+  if (!quit && q.current) {
+    miss.style.display = "";
+    miss.innerHTML = `この問題でまちがえたよ:<br>
+      <span class="w">${q.current[0]}</span> <span class="r">${q.current[1]}</span>
+      <div class="m">${q.current[2]}</div>`;
+  } else {
+    miss.style.display = "none";
+  }
+  show("scr-result");
+}
+
+// ================= ことば帳 =================
+let hideMeaning = false;
+let bookLimit = 100;
+let bookNigate = false; // にがて問題一覧モード
+
+function openBook() {
+  if (selected.size === 0) {
+    document.getElementById("home-warn").textContent = "出題範囲を1つ以上えらんでね!";
+    return;
+  }
+  bookNigate = false;
+  document.getElementById("search").value = "";
+  bookLimit = 100;
+  renderBook();
+  show("scr-book");
+}
+
+function openNigateBook() {
+  bookNigate = true;
+  document.getElementById("search").value = "";
+  bookLimit = 100;
+  renderBook();
+  show("scr-book");
+}
+
+function toggleMeaning() {
+  hideMeaning = !hideMeaning;
+  document.getElementById("hide-mn").classList.toggle("on", hideMeaning);
+  document.getElementById("hide-mn").textContent = hideMeaning ? "答えを出す" : "答えをかくす";
+  renderBook();
+}
+
+function renderBook() {
+  const kw = kanaFold(document.getElementById("search").value.trim());
+  let rows = [];
+  if (bookNigate) {
+    Object.values(loadNigate()).forEach(w => rows.push({ w, tag: SHORT_LABEL[w[3]] || "にがて" }));
+  } else if (kw) {
+    // 検索中は選択範囲に関係なく全問題から探す
+    MANIFEST.flatMap(g => g.ids).forEach(id => {
+      if (!DATA[id]) return;
+      DATA[id].words.forEach(w => rows.push({ w, tag: SHORT_LABEL[id] || id }));
+    });
+  } else {
+    [...selected].sort().forEach(id => {
+      if (!DATA[id]) return;
+      DATA[id].words.forEach(w => rows.push({ w, tag: SHORT_LABEL[id] || id }));
+    });
+  }
+  if (kw) {
+    // ひらがな/カタカナの違いを無視して 問題・読み・答え から検索
+    rows = rows.filter(r =>
+      kanaFold(r.w[0]).includes(kw) || kanaFold(r.w[1]).includes(kw) || kanaFold(r.w[2]).includes(kw));
+    // 完全一致 → 前方一致 → 部分一致の順に表示
+    const rank = r => {
+      const en = kanaFold(r.w[0]), rd = kanaFold(r.w[1]), mn = kanaFold(r.w[2]);
+      if (en === kw || rd === kw || mn === kw) return 0;
+      if (en.startsWith(kw) || rd.startsWith(kw) || mn.startsWith(kw)) return 1;
+      return 2;
+    };
+    rows.sort((a, b) => rank(a) - rank(b));
+  }
+  document.getElementById("book-count").textContent = `${rows.length}問`;
+  const list = document.getElementById("book-list");
+  const shown = rows.slice(0, bookLimit);
+  list.innerHTML = shown.map(r => `
+    <div class="word-row" onclick="this.querySelector('.mn').classList.toggle('hidden')">
+      <span class="tag">${r.tag}</span>
+      <span class="en">${r.w[0]}</span><span class="rd">${r.w[1]}</span>
+      <div class="mn${hideMeaning ? " hidden" : ""}">${r.w[2]}</div>
+    </div>`).join("");
+  if (rows.length > bookLimit) {
+    list.innerHTML += `<button class="load-more" onclick="bookLimit+=200;renderBook()">もっと見る（あと${rows.length - bookLimit}問）</button>`;
+  }
+}
+
+// ================= 初期化 =================
+// 前回の選択を復元
+try {
+  const last = JSON.parse(localStorage.getItem("kokugo_last_sel") || "[]");
+  last.forEach(id => { if (DATA[id]) selected.add(id); });
+} catch (e) {}
+if (selected.size === 0 && DATA["shou_yomi"]) selected.add("shou_yomi");
+window.addEventListener("beforeunload", () => {
+  localStorage.setItem("kokugo_last_sel", JSON.stringify([...selected]));
+});
+renderRanges();
+renderRecords();
+renderNigate();
+renderResume();
+</script>
+</body>
+</html>
