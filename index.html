@@ -328,7 +328,18 @@ function saveResume() {
   }));
 }
 function clearResume() { localStorage.removeItem(RS_KEY); }
-function loadResume() { try { return JSON.parse(localStorage.getItem(RS_KEY)); } catch (e) { return null; } }
+function loadResume() {
+  // 壊れた保存データ(形式違い・手動編集・同期不整合)で初期表示が止まらないよう検証
+  try {
+    const s = JSON.parse(localStorage.getItem(RS_KEY));
+    if (!s || typeof s.key !== "string" || !Array.isArray(s.order)
+        || !Number.isFinite(s.idx) || !Number.isFinite(s.streak)) {
+      if (s) clearResume();
+      return null;
+    }
+    return s;
+  } catch (e) { clearResume(); return null; }
+}
 
 function resumeQuiz() {
   const s = loadResume();
